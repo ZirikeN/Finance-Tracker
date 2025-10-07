@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteLocationNormalized } from 'vue-router'
 import Home from '../views/Home.vue'
 
 const router = createRouter({
@@ -8,6 +8,7 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: Home,
+      meta: { requiresAuth: true },
     },
   ],
 })
