@@ -58,10 +58,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import type { LoginCredentials, RegisterCredentials } from '../types/auth'
 
 const authStore = useAuthStore()
+const router = useRouter()
 
 const email = ref<string>('')
 const password = ref<string>('')
@@ -153,6 +155,10 @@ const submit = async (): Promise<void> => {
             await authStore.login(credentials)
         } else {
             await authStore.register(credentials)
+        }
+
+        if (authStore.user) {
+            router.push('/home')
         }
 
         // Очистка формы после успешной аутентификации

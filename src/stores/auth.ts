@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', () => {
     const user: Ref<User | null> = ref(null)
     const loading: Ref<boolean> = ref(false)
     const error: Ref<string | null> = ref(null)
+    const authIsReady: Ref<boolean> = ref(false)
 
     //Регистрация
     const register = async (credentials: RegisterCredentials) => {
@@ -77,20 +78,21 @@ export const useAuthStore = defineStore('auth', () => {
         }
     }
 
-    //Слушатель изменения состояния аунтентификации
-    const initAuth = (): void => {
-        onAuthStateChanged(auth, (firebaseUser) => {
-            if (firebaseUser) {
-                user.value = {
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    emailVerified: firebaseUser.emailVerified,
-                }
-            } else {
-                user.value = null
+    // Инициализация аутентификации
+    const initAuth = (): Promise<void> => {
+        return new Promise((resolve) => {
+            if (authIsReady.value) {
+                resolve()
+                return
             }
+            
+            onAuthStateChanged(auth, (firebaseUser) => {
+                user.value = firebaseUser
+                authIsReady.value = true // Устанавливаю флаг готовности
+                resolve()
+            })
         })
     }
 
-    return { user, loading, error, register, login, logout, initAuth }
+    return { user, loading, error, register, login, logout, initAuth, authIsReady }
 })
