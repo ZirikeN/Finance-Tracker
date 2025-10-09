@@ -54,7 +54,15 @@
 
         <v-main>
             <v-container fluid>
-                <v-row>
+                <!-- Индикатор загрузки -->
+                <v-row v-if="financeStore.loading">
+                    <v-col cols="12">
+                        <v-progress-linear indeterminate color="primary"></v-progress-linear>
+                        <div class="text-center mt-2">Загрузка данных...</div>
+                    </v-col>
+                </v-row>
+
+                <v-row v-else>
                     <v-col cols="12">
                         <v-card>
                             <v-card-title class="headline">
@@ -63,13 +71,17 @@
                             <v-card-text>
                                 <p class="text-h6">Управляйте вашими финансами эффективно</p>
 
+                                <!-- Карточки действий -->
                                 <v-row class="mt-4">
                                     <v-col cols="12" md="4">
                                         <v-card
                                             variant="outlined"
                                             class="text-center pa-4 action-card"
+                                            @click="addTransactionDialog = true"
                                         >
-                                            <v-icon size="48" color="primary">mdi-cash-plus</v-icon>
+                                            <v-icon size="48" color="success"
+                                                >mdi-plus-circle</v-icon
+                                            >
                                             <v-card-title class="text-h6"
                                                 >Добавить операцию</v-card-title
                                             >
@@ -79,9 +91,12 @@
                                         <v-card
                                             variant="outlined"
                                             class="text-center pa-4 action-card"
+                                            @click="loadData"
                                         >
-                                            <v-icon size="48" color="success">mdi-chart-pie</v-icon>
-                                            <v-card-title class="text-h6">Отчеты</v-card-title>
+                                            <v-icon size="48" color="primary">mdi-refresh</v-icon>
+                                            <v-card-title class="text-h6"
+                                                >Обновить данные</v-card-title
+                                            >
                                         </v-card>
                                     </v-col>
                                     <v-col cols="12" md="4">
@@ -95,31 +110,278 @@
                                     </v-col>
                                 </v-row>
 
-                                <!-- Статистика (заглушка) -->
+                                <!-- Диалог добавления операции -->
+                                <v-dialog v-model="addTransactionDialog" max-width="600px">
+                                    <AddTransaction
+                                        @transaction-added="handleTransactionAdded"
+                                        @close="addTransactionDialog = false"
+                                    />
+                                </v-dialog>
+
+                                <!-- Статистика -->
                                 <v-row class="mt-6">
-                                    <v-col cols="12" md="6">
-                                        <v-card variant="outlined" class="pa-4">
-                                            <v-card-title class="text-h6">
-                                                <v-icon class="mr-2">mdi-wallet</v-icon>
-                                                Баланс
-                                            </v-card-title>
-                                            <v-card-text>
-                                                <p class="text-h4 text-primary">0 ₽</p>
-                                                <p class="text-caption">Общий баланс</p>
+                                    <v-col cols="12" md="3">
+                                        <v-card color="green-lighten-5" variant="outlined">
+                                            <v-card-text class="text-center">
+                                                <div class="text-h5 text-green">
+                                                    {{ formatCurrency(financeStore.totalIncome) }}
+                                                </div>
+                                                <div class="text-caption">ОБЩИЕ ДОХОДЫ</div>
                                             </v-card-text>
                                         </v-card>
                                     </v-col>
-                                    <v-col cols="12" md="6">
-                                        <v-card variant="outlined" class="pa-4">
-                                            <v-card-title class="text-h6">
-                                                <v-icon class="mr-2">mdi-calendar</v-icon>
-                                                Этот месяц
+                                    <v-col cols="12" md="3">
+                                        <v-card color="red-lighten-5" variant="outlined">
+                                            <v-card-text class="text-center">
+                                                <div class="text-h5 text-red">
+                                                    {{ formatCurrency(financeStore.totalExpenses) }}
+                                                </div>
+                                                <div class="text-caption">ОБЩИЕ РАСХОДЫ</div>
+                                            </v-card-text>
+                                        </v-card>
+                                    </v-col>
+                                    <v-col cols="12" md="3">
+                                        <v-card
+                                            :color="
+                                                financeStore.balance >= 0
+                                                    ? 'blue-lighten-5'
+                                                    : 'orange-lighten-5'
+                                            "
+                                            variant="outlined"
+                                        >
+                                            <v-card-text class="text-center">
+                                                <div
+                                                    class="text-h5"
+                                                    :class="
+                                                        financeStore.balance >= 0
+                                                            ? 'text-blue'
+                                                            : 'text-orange'
+                                                    "
+                                                >
+                                                    {{ formatCurrency(financeStore.balance) }}
+                                                </div>
+                                                <div class="text-caption">БАЛАНС</div>
+                                            </v-card-text>
+                                        </v-card>
+                                    </v-col>
+                                    <v-col cols="12" md="3">
+                                        <v-card color="grey-lighten-4" variant="outlined">
+                                            <v-card-text class="text-center">
+                                                <div class="text-h5 text-grey">
+                                                    {{ financeStore.transactions.length }}
+                                                </div>
+                                                <div class="text-caption">ВСЕГО ОПЕРАЦИЙ</div>
+                                            </v-card-text>
+                                        </v-card>
+                                    </v-col>
+                                </v-row>
+
+                                <!-- График и последние операции -->
+                                <v-row class="mt-6">
+                                    <!-- Круговая диаграмма (Донут) -->
+                                    <v-col cols="12" lg="8">
+                                        <FinanceChart />
+                                    </v-col>
+
+                                    <!-- Последние операции -->
+                                    <v-col cols="12" lg="4">
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-card variant="outlined" class="pa-4">
+                                                    <v-card-title class="text-h6">
+                                                        <v-icon class="mr-2">mdi-wallet</v-icon>
+                                                        Баланс
+                                                    </v-card-title>
+                                                    <v-card-text>
+                                                        <p
+                                                            class="text-h4"
+                                                            :class="{
+                                                                'text-success':
+                                                                    financeStore.balance > 0,
+                                                                'text-error':
+                                                                    financeStore.balance < 0,
+                                                                'text-grey':
+                                                                    financeStore.balance === 0,
+                                                            }"
+                                                        >
+                                                            {{
+                                                                formatCurrency(financeStore.balance)
+                                                            }}
+                                                        </p>
+                                                        <p class="text-caption">Общий баланс</p>
+                                                    </v-card-text>
+                                                </v-card>
+                                            </v-col>
+                                            <v-col cols="12">
+                                                <v-card variant="outlined" class="pa-4">
+                                                    <v-card-title class="text-h6">
+                                                        <v-icon class="mr-2">mdi-calendar</v-icon>
+                                                        Этот месяц
+                                                    </v-card-title>
+                                                    <v-card-text>
+                                                        <p class="text-h4 text-success">
+                                                            {{
+                                                                formatCurrency(
+                                                                    financeStore.totalIncome
+                                                                )
+                                                            }}
+                                                        </p>
+                                                        <p class="text-caption">Доходы</p>
+                                                        <p class="text-h4 text-error">
+                                                            {{
+                                                                formatCurrency(
+                                                                    financeStore.totalExpenses
+                                                                )
+                                                            }}
+                                                        </p>
+                                                        <p class="text-caption">Расходы</p>
+                                                    </v-card-text>
+                                                </v-card>
+                                            </v-col>
+                                        </v-row>
+                                    </v-col>
+                                </v-row>
+
+                                <!-- Список последних транзакций -->
+                                <v-row
+                                    class="mt-6"
+                                    v-if="financeStore.recentTransactions.length > 0"
+                                >
+                                    <v-col cols="12">
+                                        <v-card variant="outlined">
+                                            <v-card-title
+                                                class="d-flex justify-space-between align-center"
+                                            >
+                                                <div>
+                                                    <v-icon class="mr-2">mdi-history</v-icon>
+                                                    Последние операции
+                                                </div>
+                                                <v-chip variant="outlined" color="primary">
+                                                    Всего: {{ financeStore.transactions.length }}
+                                                </v-chip>
                                             </v-card-title>
                                             <v-card-text>
-                                                <p class="text-h4 text-success">0 ₽</p>
-                                                <p class="text-caption">Доходы</p>
-                                                <p class="text-h4 text-error">0 ₽</p>
-                                                <p class="text-caption">Расходы</p>
+                                                <v-list>
+                                                    <v-list-item
+                                                        v-for="transaction in financeStore.recentTransactions"
+                                                        :key="transaction.id"
+                                                    >
+                                                        <template v-slot:prepend>
+                                                            <v-icon
+                                                                :color="
+                                                                    transaction.type === 'income'
+                                                                        ? 'success'
+                                                                        : 'error'
+                                                                "
+                                                            >
+                                                                {{
+                                                                    transaction.type === 'income'
+                                                                        ? 'mdi-arrow-up'
+                                                                        : 'mdi-arrow-down'
+                                                                }}
+                                                            </v-icon>
+                                                        </template>
+
+                                                        <v-list-item-title>
+                                                            <div class="d-flex align-center">
+                                                                <v-icon
+                                                                    :color="transaction.color"
+                                                                    size="small"
+                                                                    class="mr-2"
+                                                                >
+                                                                    mdi-circle
+                                                                </v-icon>
+                                                                {{ transaction.category }}
+                                                            </div>
+                                                        </v-list-item-title>
+                                                        <v-list-item-subtitle>
+                                                            <div>
+                                                                {{ formatDate(transaction.date) }}
+                                                            </div>
+                                                            <div v-if="transaction.description">
+                                                                {{ transaction.description }}
+                                                            </div>
+                                                        </v-list-item-subtitle>
+
+                                                        <template v-slot:append>
+                                                            <div class="text-right">
+                                                                <div
+                                                                    :class="{
+                                                                        'text-success':
+                                                                            transaction.type ===
+                                                                            'income',
+                                                                        'text-error':
+                                                                            transaction.type ===
+                                                                            'expense',
+                                                                    }"
+                                                                    class="text-h6"
+                                                                >
+                                                                    {{
+                                                                        transaction.type ===
+                                                                        'income'
+                                                                            ? '+'
+                                                                            : '-'
+                                                                    }}
+                                                                    {{
+                                                                        formatCurrency(
+                                                                            transaction.amount
+                                                                        )
+                                                                    }}
+                                                                </div>
+                                                                <div class="text-caption text-grey">
+                                                                    {{
+                                                                        transaction.type ===
+                                                                        'income'
+                                                                            ? 'Доход'
+                                                                            : 'Расход'
+                                                                    }}
+                                                                </div>
+                                                                <v-btn
+                                                                    icon
+                                                                    size="small"
+                                                                    @click="
+                                                                        deleteTransaction(
+                                                                            transaction.id
+                                                                        )
+                                                                    "
+                                                                    color="error"
+                                                                    class="mt-1"
+                                                                >
+                                                                    <v-icon>mdi-delete</v-icon>
+                                                                </v-btn>
+                                                            </div>
+                                                        </template>
+                                                    </v-list-item>
+                                                </v-list>
+                                            </v-card-text>
+                                        </v-card>
+                                    </v-col>
+                                </v-row>
+
+                                <!-- Сообщение когда нет транзакций -->
+                                <v-row
+                                    class="mt-6"
+                                    v-if="
+                                        financeStore.transactions.length === 0 &&
+                                        !financeStore.loading
+                                    "
+                                >
+                                    <v-col cols="12">
+                                        <v-card variant="outlined" class="text-center pa-6">
+                                            <v-icon size="64" color="grey-lighten-1" class="mb-4"
+                                                >mdi-cash-remove</v-icon
+                                            >
+                                            <v-card-title class="text-h5"
+                                                >Нет операций</v-card-title
+                                            >
+                                            <v-card-text>
+                                                <p class="text-body-1">
+                                                    У вас еще нет финансовых операций.
+                                                </p>
+                                                <p class="text-body-2 text-grey">
+                                                    Нажмите "Добавить операцию" чтобы начать
+                                                    отслеживать финансы
+                                                </p>
                                             </v-card-text>
                                         </v-card>
                                     </v-col>
@@ -137,54 +399,101 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useFinanceStore } from '../stores/finance'
+import FinanceChart from '../components/FinanceChart.vue'
+import AddTransaction from '../components/AddTransaction.vue'
 
 const drawer = ref<boolean | null>(false)
 const router = useRouter()
 const authStore = useAuthStore()
+const financeStore = useFinanceStore()
+const addTransactionDialog = ref(false)
+
+const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('ru-RU', {
+        style: 'currency',
+        currency: 'RUB',
+    }).format(amount)
+}
+
+const formatDate = (date: Date) => {
+    return new Intl.DateTimeFormat('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(new Date(date))
+}
 
 const handleLogout = async (): Promise<void> => {
     try {
         await authStore.logout()
+        financeStore.transactions = []
         router.push('/')
-        // После выхода router автоматически перенаправит на login
     } catch (error) {
         console.error('Logout error:', error)
     }
 }
 
-onMounted(() => {
-    // Убедимся, что пользователь авторизован
-    if (!authStore.user) {
-        router.push('/')
+const loadData = async () => {
+    await financeStore.loadTransactions()
+}
+
+const handleTransactionAdded = () => {
+    console.log('Транзакция добавлена')
+    addTransactionDialog.value = false
+}
+
+const deleteTransaction = async (transactionId: string) => {
+    if (confirm('Удалить эту транзакцию?')) {
+        try {
+            await financeStore.deleteTransaction(transactionId)
+        } catch (error) {
+            console.error('Ошибка удаления:', error)
+        }
     }
+}
+
+// АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ПРИ ЗАПУСКЕ
+onMounted(() => {
+    setTimeout(() => {
+        if (authStore.user) {
+            loadData()
+        }
+    }, 1000)
 })
 </script>
 
 <style scoped>
-.user-info {
-    display: flex;
-    align-items: center;
-    margin-right: 16px;
+.custom-drawer {
+    border-right: 1px solid #e0e0e0;
 }
 
-.logout-btn:hover {
+.nav-item {
     cursor: pointer;
-    background-color: rgba(0, 0, 0, 0.04);
+    transition: background-color 0.3s;
 }
 
 .nav-item:hover {
-    cursor: pointer;
-    background-color: rgba(0, 0, 0, 0.04);
+    background-color: #f5f5f5;
 }
 
-.custom-drawer {
-    background-color: #f5f5f5;
+.logout-btn {
+    cursor: pointer;
+    color: #f44336;
+}
+
+.action-card {
+    cursor: pointer;
+    transition: transform 0.2s;
+    height: 100%;
 }
 
 .action-card:hover {
-    cursor: pointer;
-    background-color: #f5f5f5;
     transform: translateY(-2px);
-    transition: all 0.3s ease;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
 }
 </style>
