@@ -55,15 +55,12 @@ export const useFinanceStore = defineStore('finance', () => {
                 where('userId', '==', authStore.user.uid)
             )
 
-            console.log('🔍 Запрос к Firestore...')
             const querySnapshot = await getDocs(q)
-            console.log('✅ Найдено документов:', querySnapshot.size)
 
             const loadedTransactions: any[] = []
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data()
-                console.log('📄 Документ:', doc.id, data)
 
                 loadedTransactions.push({
                     id: doc.id,
@@ -74,15 +71,12 @@ export const useFinanceStore = defineStore('finance', () => {
 
             // ВАЖНО: Полностью заменяем массив
             transactions.value = loadedTransactions
-            console.log('🎉 ДАННЫЕ В STORE:', transactions.value)
-            console.log('📊 Количество транзакций:', transactions.value.length)
         } catch (error: any) {
-            console.error('💥 ОШИБКА:', error)
+            console.error('ERROR:', error)
             console.error('Code:', error.code)
             console.error('Message:', error.message)
         } finally {
             loading.value = false
-            console.log('=== КОНЕЦ ЗАГРУЗКИ ===')
         }
     }
 
@@ -155,14 +149,14 @@ export const useFinanceStore = defineStore('finance', () => {
 
     // Последние транзакции (5 штук)
     const recentTransactions = computed(() => {
-        return transactions.value.slice(0, 5)
+        return transactions.value.slice(0, 10)
     })
 
     // Получение цвета категории
     const getCategoryColor = (type: 'income' | 'expense', categoryName: string) => {
         const categoryList = type === 'income' ? categories.income : categories.expense
-        const category = categoryList.find(cat => cat.name === categoryName)
-        return category ? category.color : (type === 'income' ? '#4CAF50' : '#F44336')
+        const category = categoryList.find((cat) => cat.name === categoryName)
+        return category ? category.color : type === 'income' ? '#4CAF50' : '#F44336'
     }
 
     return {

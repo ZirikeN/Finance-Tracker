@@ -1,5 +1,13 @@
 <template>
     <v-app id="inspire">
+        <FullScreenLoader
+            :loading="financeStore.loading"
+            title="Загрузка финансовых данных"
+            message="Получаем информацию о ваших транзакциях..."
+            subMessage="Это может занять несколько секунд"
+            :show-progress="true"
+        />
+
         <v-navigation-drawer v-model="drawer" class="custom-drawer">
             <v-list>
                 <!-- Профиль пользователя -->
@@ -54,23 +62,10 @@
 
         <v-main>
             <v-container fluid>
-                <!-- Индикатор загрузки -->
-                <v-row v-if="financeStore.loading">
-                    <v-col cols="12">
-                        <v-progress-linear indeterminate color="primary"></v-progress-linear>
-                        <div class="text-center mt-2">Загрузка данных...</div>
-                    </v-col>
-                </v-row>
-
-                <v-row v-else>
+                <v-row>
                     <v-col cols="12">
                         <v-card>
-                            <v-card-title class="headline">
-                                Добро пожаловать в Finance Tracker!
-                            </v-card-title>
                             <v-card-text>
-                                <p class="text-h6">Управляйте вашими финансами эффективно</p>
-
                                 <!-- Карточки действий -->
                                 <v-row class="mt-4">
                                     <v-col cols="12" md="4">
@@ -122,8 +117,8 @@
                                 <v-row class="mt-6">
                                     <v-col cols="12" md="3">
                                         <v-card color="green-lighten-5" variant="outlined">
-                                            <v-card-text class="text-center">
-                                                <div class="text-h5 text-green">
+                                            <v-card-text class="text-center text-green">
+                                                <div class="text-h5">
                                                     {{ formatCurrency(financeStore.totalIncome) }}
                                                 </div>
                                                 <div class="text-caption">ОБЩИЕ ДОХОДЫ</div>
@@ -132,8 +127,8 @@
                                     </v-col>
                                     <v-col cols="12" md="3">
                                         <v-card color="red-lighten-5" variant="outlined">
-                                            <v-card-text class="text-center">
-                                                <div class="text-h5 text-red">
+                                            <v-card-text class="text-center text-red">
+                                                <div class="text-h5">
                                                     {{ formatCurrency(financeStore.totalExpenses) }}
                                                 </div>
                                                 <div class="text-caption">ОБЩИЕ РАСХОДЫ</div>
@@ -149,15 +144,8 @@
                                             "
                                             variant="outlined"
                                         >
-                                            <v-card-text class="text-center">
-                                                <div
-                                                    class="text-h5"
-                                                    :class="
-                                                        financeStore.balance >= 0
-                                                            ? 'text-blue'
-                                                            : 'text-orange'
-                                                    "
-                                                >
+                                            <v-card-text class="text-center text-blue">
+                                                <div class="text-h5">
                                                     {{ formatCurrency(financeStore.balance) }}
                                                 </div>
                                                 <div class="text-caption">БАЛАНС</div>
@@ -166,8 +154,8 @@
                                     </v-col>
                                     <v-col cols="12" md="3">
                                         <v-card color="grey-lighten-4" variant="outlined">
-                                            <v-card-text class="text-center">
-                                                <div class="text-h5 text-grey">
+                                            <v-card-text class="text-center text-grey">
+                                                <div class="text-h5">
                                                     {{ financeStore.transactions.length }}
                                                 </div>
                                                 <div class="text-caption">ВСЕГО ОПЕРАЦИЙ</div>
@@ -261,7 +249,7 @@
                                                 </v-chip>
                                             </v-card-title>
                                             <v-card-text>
-                                                <v-list>
+                                                <ul v-auto-animate>
                                                     <v-list-item
                                                         v-for="transaction in financeStore.recentTransactions"
                                                         :key="transaction.id"
@@ -352,7 +340,7 @@
                                                             </div>
                                                         </template>
                                                     </v-list-item>
-                                                </v-list>
+                                                </ul>
                                             </v-card-text>
                                         </v-card>
                                     </v-col>
@@ -400,8 +388,10 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useFinanceStore } from '../stores/finance'
+
 import FinanceChart from '../components/FinanceChart.vue'
 import AddTransaction from '../components/AddTransaction.vue'
+import FullScreenLoader  from '../components/FullScreenLoader.vue'
 
 const drawer = ref<boolean | null>(false)
 const router = useRouter()
@@ -439,7 +429,6 @@ const loadData = async () => {
 }
 
 const handleTransactionAdded = () => {
-    console.log('Транзакция добавлена')
     addTransactionDialog.value = false
 }
 
@@ -453,13 +442,8 @@ const deleteTransaction = async (transactionId: string) => {
     }
 }
 
-// АВТОМАТИЧЕСКАЯ ЗАГРУЗКА ПРИ ЗАПУСКЕ
 onMounted(() => {
-    setTimeout(() => {
-        if (authStore.user) {
-            loadData()
-        }
-    }, 1000)
+    loadData()
 })
 </script>
 
