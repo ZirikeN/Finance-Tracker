@@ -9,45 +9,7 @@
         />
 
         <v-navigation-drawer v-model="drawer" class="custom-drawer">
-            <v-list>
-                <!-- Профиль пользователя -->
-                <v-list-item prepend-icon="mdi-account" :title="authStore.user?.email" />
-
-                <!-- Навигационные пункты -->
-                <v-list-item
-                    prepend-icon="mdi-home"
-                    title="Главная"
-                    value="home"
-                    @click="$router.push('/home')"
-                    class="nav-item"
-                />
-                <v-list-item
-                    prepend-icon="mdi-finance"
-                    title="Финансы"
-                    value="finance"
-                    class="nav-item"
-                />
-                <v-list-item
-                    prepend-icon="mdi-chart-bar"
-                    title="Отчеты"
-                    value="reports"
-                    class="nav-item"
-                />
-                <v-list-item
-                    prepend-icon="mdi-cog"
-                    title="Настройки"
-                    value="settings"
-                    class="nav-item"
-                />
-
-                <!-- Выход -->
-                <v-list-item
-                    prepend-icon="mdi-logout"
-                    title="Выйти"
-                    @click="handleLogout"
-                    class="logout-btn"
-                />
-            </v-list>
+            <NavMenu></NavMenu>
         </v-navigation-drawer>
 
         <v-app-bar>
@@ -388,16 +350,19 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useFinanceStore } from '../stores/finance'
+import { useTheme } from 'vuetify'
 
 import FinanceChart from '../components/FinanceChart.vue'
 import AddTransaction from '../components/AddTransaction.vue'
 import FullScreenLoader  from '../components/FullScreenLoader.vue'
+import NavMenu from '../components/NavMenu.vue'
 
 const drawer = ref<boolean | null>(false)
 const router = useRouter()
 const authStore = useAuthStore()
 const financeStore = useFinanceStore()
 const addTransactionDialog = ref(false)
+const theme = useTheme()
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -412,16 +377,6 @@ const formatDate = (date: Date) => {
         month: '2-digit',
         year: 'numeric',
     }).format(new Date(date))
-}
-
-const handleLogout = async (): Promise<void> => {
-    try {
-        await authStore.logout()
-        financeStore.transactions = []
-        router.push('/')
-    } catch (error) {
-        console.error('Logout error:', error)
-    }
 }
 
 const loadData = async () => {
@@ -444,6 +399,10 @@ const deleteTransaction = async (transactionId: string) => {
 
 onMounted(() => {
     loadData()
+
+    if (localStorage.getItem('app-theme') === 'dark') {
+        theme.global.name.value = 'dark'
+    }
 })
 </script>
 
