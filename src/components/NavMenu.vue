@@ -1,5 +1,5 @@
 <template>
-    <v-list>
+    <v-list v-if="authStore.user">
         <v-list-item prepend-icon="mdi-wallet">{{
             formatCurrency(financeStore.balance)
         }}</v-list-item>
@@ -15,6 +15,12 @@
             @click="$router.push('/home')"
             class="nav-item"
         />
+        <v-list-item
+            prepend-icon="mdi-tag-multiple"
+            title="Категории"
+            value="categories"
+            @click="router.push('/categories')"
+        ></v-list-item>
         <v-list-item prepend-icon="mdi-finance" title="Финансы" value="finance" class="nav-item" />
         <v-list-item prepend-icon="mdi-chart-bar" title="Отчеты" value="reports" class="nav-item" />
         <v-list-item prepend-icon="mdi-cog" title="Настройки" value="settings" class="nav-item" />
@@ -49,14 +55,41 @@
             class="logout-btn"
         />
     </v-list>
+
+    <v-list v-else>
+        <v-list-item title="Войдите в систему" />
+
+        <v-list-item class="theme-toggle-item">
+            <template v-slot:prepend>
+                <v-icon>
+                    {{
+                        theme.global.name.value === 'light'
+                            ? 'mdi-weather-sunny'
+                            : 'mdi-weather-night'
+                    }}
+                </v-icon>
+            </template>
+            <v-list-item-title>Тема</v-list-item-title>
+            <template v-slot:append>
+                <v-switch
+                    @click="toggleTheme"
+                    :model-value="theme.global.name.value === 'dark'"
+                    color="primary"
+                    hide-details
+                    density="compact"
+                />
+            </template>
+        </v-list-item>
+    </v-list>
 </template>
 
 <script setup lang="ts">
-import {useRouter} from 'vue-router'
-import {useTheme} from 'vuetify'
+import {onMounted} from 'vue'
+import { useRouter } from 'vue-router'
+import { useTheme } from 'vuetify'
 
-import {useFinanceStore} from '../stores/finance'
-import {useAuthStore} from '../stores/auth'
+import { useFinanceStore } from '../stores/finance'
+import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -84,16 +117,19 @@ const formatCurrency = (amount: number) => {
         currency: 'RUB',
     }).format(amount)
 }
+
+const loadData = async () => {
+    await financeStore.loadTransactions()
+}
+
+onMounted(() => {
+    loadData()
+})
 </script>
 
 <style scoped>
 .nav-item {
     cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.nav-item:hover {
-    background-color: #f5f5f5;
 }
 
 .logout-btn {

@@ -13,34 +13,13 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { useAuthStore } from './auth'
+import { useCategoriesStore } from './category'
 
 export const useFinanceStore = defineStore('finance', () => {
     const transactions = ref<any[]>([])
     const loading = ref(false)
     const authStore = useAuthStore()
-
-    // Категории для доходов и расходов
-    const categories = {
-        income: [
-            { name: 'Зарплата', color: '#4CAF50', icon: 'mdi-briefcase' },
-            { name: 'Фриланс', color: '#8BC34A', icon: 'mdi-laptop' },
-            { name: 'Инвестиции', color: '#CDDC39', icon: 'mdi-chart-line' },
-            { name: 'Подарки', color: '#FFEB3B', icon: 'mdi-gift' },
-            { name: 'Возврат долга', color: '#FFC107', icon: 'mdi-cash-clock' },
-            { name: 'Прочее', color: '#FF9800', icon: 'mdi-dots-horizontal' },
-        ],
-        expense: [
-            { name: 'Продукты', color: '#F44336', icon: 'mdi-cart' },
-            { name: 'Транспорт', color: '#E91E63', icon: 'mdi-car' },
-            { name: 'Жилье', color: '#9C27B0', icon: 'mdi-home' },
-            { name: 'Развлечения', color: '#673AB7', icon: 'mdi-movie' },
-            { name: 'Здоровье', color: '#3F51B5', icon: 'mdi-hospital' },
-            { name: 'Одежда', color: '#2196F3', icon: 'mdi-hanger' },
-            { name: 'Образование', color: '#03A9F4', icon: 'mdi-school' },
-            { name: 'Рестораны', color: '#00BCD4', icon: 'mdi-food' },
-            { name: 'Прочее', color: '#607D8B', icon: 'mdi-dots-horizontal' },
-        ],
-    }
+    const categoriesStore = useCategoriesStore()
 
     const loadTransactions = async () => {
         if (!authStore.user) return
@@ -48,7 +27,9 @@ export const useFinanceStore = defineStore('finance', () => {
         loading.value = true
 
         try {
-            console.log('👤 User UID:', authStore.user.uid)
+            if (categoriesStore.categories.length === 0) {
+                await categoriesStore.loadUserCategories()
+            }
 
             const q = query(
                 collection(db, 'transactions'),
@@ -152,11 +133,14 @@ export const useFinanceStore = defineStore('finance', () => {
         return transactions.value.slice(0, 10)
     })
 
-    // Получение цвета категории
+    // Обновляем getCategoryColor для использования categoriesStore
     const getCategoryColor = (type: 'income' | 'expense', categoryName: string) => {
-        const categoryList = type === 'income' ? categories.income : categories.expense
-        const category = categoryList.find((cat) => cat.name === categoryName)
-        return category ? category.color : type === 'income' ? '#4CAF50' : '#F44336'
+        return categoriesStore.getCategoryColor(type, categoryName)
+    }
+
+    // Добавляем получение иконки
+    const getCategoryIcon = (type: 'income' | 'expense', categoryName: string) => {
+        return categoriesStore.getCategoryIcon(type, categoryName)
     }
 
     return {
@@ -165,12 +149,13 @@ export const useFinanceStore = defineStore('finance', () => {
         loadTransactions,
         addTransaction,
         deleteTransaction,
-        categories,
+        categories: categoriesStore.groupedCategories,
         totalIncome,
         totalExpenses,
         balance,
         chartData,
         recentTransactions,
         getCategoryColor,
+        getCategoryIcon,
     }
 })

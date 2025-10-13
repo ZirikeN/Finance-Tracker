@@ -26,6 +26,7 @@
                 />
                 <!-- Выбор конкретной даты -->
                 <v-text-field
+                    v-if="periodFilter === 'custom'"
                     v-model="selectedDate"
                     label="Выбрать дату"
                     type="date"
@@ -82,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
 import { useFinanceStore } from '../stores/finance'
 import { Chart, registerables } from 'chart.js'
 
@@ -91,6 +92,7 @@ Chart.register(...registerables)
 const financeStore = useFinanceStore()
 const chartCanvas = ref<HTMLCanvasElement>()
 const chartInstance = ref<Chart | null>(null)
+const isChartMounted = ref(false)
 
 // Фильтры
 const chartFilter = ref('all') // all, income, expense
@@ -286,73 +288,105 @@ const formatCurrency = (amount: number) => {
     }).format(amount)
 }
 
-const createChart = () => {
-    if (!chartCanvas.value || !hasData.value) return
-
-    // Удаляем старый график если существует
+const destroyChart = () => {
     if (chartInstance.value) {
         chartInstance.value.destroy()
+        chartInstance.value = null
+    }
+}
+
+const createChart = () => {
+    if (!chartCanvas.value || !hasData.value || !isChartMounted.value) {
+        console.log('❌ Не могу создать график:', {
+            hasCanvas: !!chartCanvas.value,
+            hasData: hasData.value,
+            isMounted: isChartMounted.value,
+        })
+        return
     }
 
-    chartInstance.value = new Chart(chartCanvas.value, {
-        type: 'doughnut',
-        data: {
-            labels: chartData.value.labels,
-            datasets: [
-                {
-                    data: chartData.value.data,
-                    backgroundColor: chartData.value.backgroundColor,
-                    borderWidth: 3,
-                    borderColor: '#ffffff',
-                    hoverBorderWidth: 4,
-                    hoverBorderColor: '#ffffff',
-                    hoverOffset: 8,
-                },
-            ],
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '65%',
-            plugins: {
-                legend: {
-                    display: false,
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function (context) {
-                            const label = context.label || ''
-                            const value = context.raw as number
-                            const total = context.dataset.data.reduce(
-                                (a: number, b: number) => a + b,
-                                0
-                            )
-                            const percentage = Math.round((value / total) * 100)
-                            return `${label}: ${formatCurrency(value)} (${percentage}%)`
+    // Удаляем старый график если существует
+    destroyChart()
+
+    try {
+        console.log('📊 Создаем новый график')
+        chartInstance.value = new Chart(chartCanvas.value, {
+            type: 'doughnut',
+            data: {
+                labels: chartData.value.labels,
+                datasets: [
+                    {
+                        data: chartData.value.data,
+                        backgroundColor: chartData.value.backgroundColor,
+                        borderWidth: 3,
+                        borderColor: '#ffffff',
+                        hoverBorderWidth: 4,
+                        hoverBorderColor: '#ffffff',
+                        hoverOffset: 8,
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '65%',
+                plugins: {
+                    legend: {
+                        display: false,
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function (context) {
+                                const label = context.label || ''
+                                const value = context.raw as number
+                                const total = context.dataset.data.reduce(
+                                    (a: number, b: number) => a + b,
+                                    0
+                                )
+                                const percentage = Math.round((value / total) * 100)
+                                return `${label}: ${formatCurrency(value)} (${percentage}%)`
+                            },
                         },
                     },
                 },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true,
+                },
             },
-            animation: {
-                animateScale: true,
-                animateRotate: true,
-            },
-        },
-    })
+        })
+    } catch (error) {
+        console.error('❌ Ошибка создания графика:', error)
+    }
 }
 
-// Создаем график при монтировании и при изменении данных
+// Создаем график при монтировании
 onMounted(() => {
-    if (hasData.value) {
-        createChart()
-    }
+    isChartMounted.value = true
+    console.log('✅ Компонент графика смонтирован')
+
+    // Ждем следующего тика для гарантии, что DOM обновлен
+    nextTick(() => {
+        if (hasData.value) {
+            createChart()
+        }
+    })
 })
 
+// Обновляем график при изменении данных
 watch(
     [chartData, chartFilter, periodFilter, selectedDate],
     () => {
-        if (hasData.value) {
-            setTimeout(createChart, 100)
+        if (isChartMounted.value) {
+            console.log('🔄 Обновляем график')
+            // Используем setTimeout для гарантии, что DOM обновлен
+            setTimeout(() => {
+                if (hasData.value) {
+                    createChart()
+                } else {
+                    destroyChart()
+                }
+            }, 100)
         }
     },
     { deep: true }
@@ -365,10 +399,11 @@ watch(periodFilter, (newPeriod) => {
     }
 })
 
+// Уничтожаем график при размонтировании
 onUnmounted(() => {
-    if (chartInstance.value) {
-        chartInstance.value.destroy()
-    }
+    console.log('🚪 Компонент графика размонтирован')
+    isChartMounted.value = false
+    destroyChart()
 })
 </script>
 

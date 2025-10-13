@@ -60,9 +60,12 @@
                                         <v-card
                                             variant="outlined"
                                             class="text-center pa-4 action-card"
+                                            @click="router.push('/categories')"
                                         >
-                                            <v-icon size="48" color="warning">mdi-cog</v-icon>
-                                            <v-card-title class="text-h6">Настройки</v-card-title>
+                                            <v-icon size="48" color="warning"
+                                                >mdi-tag-multiple</v-icon
+                                            >
+                                            <v-card-title class="text-h6">Категории</v-card-title>
                                         </v-card>
                                     </v-col>
                                 </v-row>
@@ -130,7 +133,7 @@
                                 <v-row class="mt-6">
                                     <!-- Круговая диаграмма (Донут) -->
                                     <v-col cols="12" lg="8">
-                                        <FinanceChart />
+                                        <FinanceChart :key="chartKey" />
                                     </v-col>
 
                                     <!-- Последние операции -->
@@ -346,23 +349,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useFinanceStore } from '../stores/finance'
+import { useCategoriesStore } from '../stores/category'
 import { useTheme } from 'vuetify'
 
 import FinanceChart from '../components/FinanceChart.vue'
 import AddTransaction from '../components/AddTransaction.vue'
-import FullScreenLoader  from '../components/FullScreenLoader.vue'
+import FullScreenLoader from '../components/FullScreenLoader.vue'
 import NavMenu from '../components/NavMenu.vue'
 
 const drawer = ref<boolean | null>(false)
+const chartKey = ref(0)
 const router = useRouter()
+const categoriesStore = useCategoriesStore()
 const authStore = useAuthStore()
 const financeStore = useFinanceStore()
 const addTransactionDialog = ref(false)
 const theme = useTheme()
+
+
+const forceChartUpdate = () => {
+    chartKey.value++
+}
 
 const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('ru-RU', {
@@ -381,10 +392,13 @@ const formatDate = (date: Date) => {
 
 const loadData = async () => {
     await financeStore.loadTransactions()
+    await categoriesStore.loadUserCategories()
+    setTimeout(forceChartUpdate, 100)
 }
 
 const handleTransactionAdded = () => {
     addTransactionDialog.value = false
+    setTimeout(forceChartUpdate, 300)
 }
 
 const deleteTransaction = async (transactionId: string) => {
@@ -403,6 +417,10 @@ onMounted(() => {
     if (localStorage.getItem('app-theme') === 'dark') {
         theme.global.name.value = 'dark'
     }
+})
+
+onUnmounted(() => {
+    chartKey.value = 0
 })
 </script>
 

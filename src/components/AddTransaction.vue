@@ -19,9 +19,25 @@
                         :rules="[(v) => !!v || 'Выберите категорию']"
                         required
                         class="mb-4"
-                    />
+                    >
+                        <template v-slot:item="{ item, props }">
+                            <v-list-item v-bind="props">
+                                <template v-slot:prepend>
+                                    <v-icon :color="getCategoryColor(item.value)">{{
+                                        getCategoryIcon(item.value)
+                                    }}</v-icon>
+                                </template>
+                            </v-list-item>
+                        </template>
+                        <template v-slot:selection="{ item }">
+                            <v-icon :color="getCategoryColor(item.value)" class="mr-2">{{
+                                getCategoryIcon(item.value)
+                            }}</v-icon>
+                            {{ item.title }}
+                        </template>
+                    </v-select>
 
-                    <!-- Сумма -->
+                    <!-- Остальные поля остаются без изменений -->
                     <v-text-field
                         v-model.number="form.amount"
                         label="Сумма"
@@ -35,7 +51,6 @@
                         class="mb-4"
                     />
 
-                    <!-- Дата -->
                     <v-text-field
                         v-model="form.date"
                         label="Дата"
@@ -45,7 +60,6 @@
                         class="mb-4"
                     />
 
-                    <!-- Описание -->
                     <v-textarea
                         v-model="form.description"
                         label="Описание"
@@ -68,8 +82,10 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useFinanceStore } from '../stores/finance'
+import { useCategoriesStore } from '../stores/category'
 
 const financeStore = useFinanceStore()
+const categoriesStore = useCategoriesStore()
 const loading = ref(false)
 
 const form = ref({
@@ -81,12 +97,22 @@ const form = ref({
 })
 
 const availableCategories = computed(() => {
-    const categoryList = financeStore.categories[form.value.type]
+    const categoryList = categoriesStore.getCategoriesByType(form.value.type)
     return categoryList.map((cat) => ({
         title: cat.name,
         value: cat.name,
+        color: cat.color,
+        icon: cat.icon,
     }))
 })
+
+const getCategoryColor = (categoryName: string) => {
+    return categoriesStore.getCategoryColor(form.value.type, categoryName)
+}
+
+const getCategoryIcon = (categoryName: string) => {
+    return categoriesStore.getCategoryIcon(form.value.type, categoryName)
+}
 
 const submit = async () => {
     if (!form.value.category || form.value.amount <= 0) return
@@ -99,12 +125,10 @@ const submit = async () => {
             amount: Number(form.value.amount),
             date: new Date(form.value.date),
             description: form.value.description,
-            color: financeStore.getCategoryColor(form.value.type, form.value.category),
+            color: getCategoryColor(form.value.category),
         }
 
         await financeStore.addTransaction(transactionData)
-
-        // Emit событие для обновления данных
         emit('transaction-added')
         resetForm()
     } catch (error) {
@@ -133,8 +157,10 @@ const closeDialog = () => {
 watch(
     () => form.value.type,
     (newType) => {
-        const firstCategory = financeStore.categories[newType][0]
-        form.value.category = firstCategory.name
+        const categories = categoriesStore.getCategoriesByType(newType)
+        if (categories.length > 0) {
+            form.value.category = categories[0].name
+        }
     },
     { immediate: true }
 )

@@ -1,9 +1,7 @@
 <template>
     <v-app id="inspire">
         <v-navigation-drawer v-model="drawer" class="custom-drawer">
-            <v-list>
-                <v-list-item title="Войдите в систему" />
-            </v-list>
+            <nav-menu></nav-menu>
         </v-navigation-drawer>
 
         <v-app-bar>
@@ -22,12 +20,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useTheme } from 'vuetify'
 import { useAuthStore } from '../stores/auth'
+
 import AuthForm from '../components/AuthForm.vue'
+import NavMenu from '../components/NavMenu.vue'
 
 const drawer = ref<boolean | null>(false)
 const router = useRouter()
 const authStore = useAuthStore()
+const theme = useTheme()
 
 onMounted(() => {
     authStore.initAuth()
@@ -35,11 +37,9 @@ onMounted(() => {
     if (authStore.user) {
         router.push('/home')
     }
+
+    if (localStorage.getItem('app-theme') === 'dark') {
+        theme.global.name.value = 'dark'
+    }
 })
 </script>
-
-<style scoped>
-.custom-drawer {
-    background-color: #f5f5f5;
-}
-</style>

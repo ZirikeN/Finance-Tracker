@@ -15,7 +15,16 @@ app.use(router)
 app.use(vuetify)
 
 import { useAuthStore } from './stores/auth'
+import { useCategoriesStore } from './stores/category'
 const authStore = useAuthStore()
-authStore.initAuth()
+const categoriesStore = useCategoriesStore()
 
-app.mount('#app')
+// Инициализируем аутентификацию и затем категории
+authStore.initAuth().then(() => {
+    // Загружаем категории если пользователь авторизован
+    if (authStore.user) {
+        categoriesStore.loadUserCategories()
+    }
+    
+    app.mount('#app')
+})
