@@ -396,15 +396,16 @@ const loadData = async () => {
     setTimeout(forceChartUpdate, 100)
 }
 
-const handleTransactionAdded = () => {
+const handleTransactionAdded = async () => {
     addTransactionDialog.value = false
-    setTimeout(forceChartUpdate, 300)
+    await loadData()
 }
 
 const deleteTransaction = async (transactionId: string) => {
     if (confirm('Удалить эту транзакцию?')) {
         try {
             await financeStore.deleteTransaction(transactionId)
+            await loadData()
         } catch (error) {
             console.error('Ошибка удаления:', error)
         }

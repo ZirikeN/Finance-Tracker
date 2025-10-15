@@ -8,25 +8,28 @@ import {
     orderBy,
     addDoc,
     deleteDoc,
+    updateDoc,
     doc,
     Timestamp,
 } from 'firebase/firestore'
 import { db } from '../firebase/config'
 import { useAuthStore } from './auth'
 import { useCategoriesStore } from './category'
+import type { Transaction } from '../types/transaction'
 
 export const useFinanceStore = defineStore('finance', () => {
-    const transactions = ref<any[]>([])
+    const transactions = ref<Transaction[]>([])
     const loading = ref(false)
     const authStore = useAuthStore()
     const categoriesStore = useCategoriesStore()
 
+    // Загрузка транзакций
     const loadTransactions = async () => {
         if (!authStore.user) return
-
         loading.value = true
 
         try {
+            // Убедимся, что категории загружены
             if (categoriesStore.categories.length === 0) {
                 await categoriesStore.loadUserCategories()
             }
@@ -37,51 +40,81 @@ export const useFinanceStore = defineStore('finance', () => {
             )
 
             const querySnapshot = await getDocs(q)
-
-            const loadedTransactions: any[] = []
+            const loadedTransactions: Transaction[] = []
 
             querySnapshot.forEach((doc) => {
                 const data = doc.data()
-
                 loadedTransactions.push({
                     id: doc.id,
                     ...data,
                     date: data.date?.toDate?.() || data.date,
-                })
+                } as Transaction)
             })
 
-            // ВАЖНО: Полностью заменяем массив
+            loadedTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
             transactions.value = loadedTransactions
         } catch (error: any) {
             console.error('ERROR:', error)
-            console.error('Code:', error.code)
-            console.error('Message:', error.message)
         } finally {
             loading.value = false
         }
     }
 
-    const addTransaction = async (transaction: any) => {
+    // Добавление транзакции
+    const addTransaction = async (transaction: Omit<Transaction, 'id' | 'userId'>) => {
         if (!authStore.user) throw new Error('No user')
 
         const transactionData = {
             ...transaction,
             userId: authStore.user.uid,
             date: Timestamp.fromDate(new Date(transaction.date)),
+            color: categoriesStore.getCategoryColor(transaction.type, transaction.category),
         }
 
         const docRef = await addDoc(collection(db, 'transactions'), transactionData)
 
-        const newTransaction = {
+        const newTransaction: Transaction = {
             id: docRef.id,
-            ...transaction,
-            userId: authStore.user.uid,
+            ...transactionData,
+            date: new Date(transaction.date)
         }
 
         transactions.value.unshift(newTransaction)
+
         return newTransaction
     }
 
+    // Обновление транзакции
+    const updateTransaction = async (transactionId: string, updates: Partial<Transaction>) => {
+        if (!authStore.user) throw new Error('No user')
+
+        const updateData = { ...updates }
+
+        // Если обновляется дата, конвертируем в Timestamp
+        if (updates.date) {
+            updateData.date = Timestamp.fromDate(new Date(updates.date))
+        }
+
+        // Если обновляется категория или тип, обновляем цвет
+        if (updates.category && updates.type) {
+            updateData.color = categoriesStore.getCategoryColor(updates.type, updates.category)
+        }
+
+        const transactionDoc = doc(db, 'transactions', transactionId)
+        await updateDoc(transactionDoc, updateData)
+
+        // Обновляем в локальном хранилище
+        const index = transactions.value.findIndex((t) => t.id === transactionId)
+        if (index !== -1) {
+            transactions.value[index] = {
+                ...transactions.value[index],
+                ...updates,
+                color: updates.color || transactions.value[index].color,
+            }
+        }
+    }
+
+    // Удаление транзакции
     const deleteTransaction = async (transactionId: string) => {
         try {
             await deleteDoc(doc(db, 'transactions', transactionId))
@@ -128,17 +161,22 @@ export const useFinanceStore = defineStore('finance', () => {
         }
     })
 
-    // Последние транзакции (5 штук)
+    // Последние транзакции (10 штук)
     const recentTransactions = computed(() => {
         return transactions.value.slice(0, 10)
     })
 
-    // Обновляем getCategoryColor для использования categoriesStore
+    // Все транзакции (для страницы всех операций)
+    const allTransactions = computed(() => {
+        return transactions.value
+    })
+
+    // Получение цвета категории
     const getCategoryColor = (type: 'income' | 'expense', categoryName: string) => {
         return categoriesStore.getCategoryColor(type, categoryName)
     }
 
-    // Добавляем получение иконки
+    // Получение иконки категории
     const getCategoryIcon = (type: 'income' | 'expense', categoryName: string) => {
         return categoriesStore.getCategoryIcon(type, categoryName)
     }
@@ -148,6 +186,7 @@ export const useFinanceStore = defineStore('finance', () => {
         loading,
         loadTransactions,
         addTransaction,
+        updateTransaction,
         deleteTransaction,
         categories: categoriesStore.groupedCategories,
         totalIncome,
@@ -155,6 +194,7 @@ export const useFinanceStore = defineStore('finance', () => {
         balance,
         chartData,
         recentTransactions,
+        allTransactions,
         getCategoryColor,
         getCategoryIcon,
     }

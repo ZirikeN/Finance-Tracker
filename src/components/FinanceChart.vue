@@ -6,7 +6,6 @@
                 Финансовая статистика
             </div>
             <div class="d-flex align-center" style="gap: 8px">
-                <!-- Фильтр по типу -->
                 <v-select
                     v-model="chartFilter"
                     :items="chartFilters"
@@ -14,8 +13,8 @@
                     variant="outlined"
                     style="min-width: 140px"
                     hide-details
+                    @update:model-value="handleFilterChange"
                 />
-                <!-- Фильтр по периоду -->
                 <v-select
                     v-model="periodFilter"
                     :items="periodFilters"
@@ -23,8 +22,8 @@
                     variant="outlined"
                     style="min-width: 140px"
                     hide-details
+                    @update:model-value="handleFilterChange"
                 />
-                <!-- Выбор конкретной даты -->
                 <v-text-field
                     v-if="periodFilter === 'custom'"
                     v-model="selectedDate"
@@ -35,28 +34,29 @@
                     style="min-width: 150px"
                     hide-details
                     :max="new Date().toISOString().split('T')[0]"
+                    @change="handleFilterChange"
                 />
             </div>
         </v-card-title>
 
         <v-card-text>
-            <!-- Информация о фильтрах -->
             <v-alert v-if="filterInfo" type="info" density="compact" class="mb-4">
                 {{ filterInfo }}
             </v-alert>
 
-            <div v-if="hasData" class="chart-container">
-                <canvas ref="chartCanvas"></canvas>
-                <div class="chart-center-text">
+            <div class="chart-wrapper">
+                <canvas v-if="hasData" ref="chartCanvas"></canvas>
+
+                <div v-if="hasData" class="chart-center-text">
                     <div class="center-amount">{{ formatCurrency(centerAmount) }}</div>
                     <div class="center-label">{{ centerLabel }}</div>
                 </div>
-            </div>
 
-            <div v-else class="text-center py-8">
-                <v-icon size="64" color="grey-lighten-2" class="mb-4">mdi-chart-donut</v-icon>
-                <p class="text-h6 text-grey">Нет данных для отображения</p>
-                <p class="text-grey">Добавьте транзакции или измените параметры фильтрации</p>
+                <div v-else class="text-center py-8">
+                    <v-icon size="64" color="grey-lighten-2" class="mb-4">mdi-chart-donut</v-icon>
+                    <p class="text-h6 text-grey">Нет данных для отображения</p>
+                    <p class="text-grey">Добавьте транзакции или измените параметры фильтрации</p>
+                </div>
             </div>
 
             <!-- Легенда -->
@@ -83,7 +83,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { useFinanceStore } from '../stores/finance'
 import { Chart, registerables } from 'chart.js'
 
@@ -92,12 +92,12 @@ Chart.register(...registerables)
 const financeStore = useFinanceStore()
 const chartCanvas = ref<HTMLCanvasElement>()
 const chartInstance = ref<Chart | null>(null)
-const isChartMounted = ref(false)
+const isMounted = ref(false)
 
 // Фильтры
-const chartFilter = ref('all') // all, income, expense
-const periodFilter = ref('all') // all, today, week, month, custom
-const selectedDate = ref('') // для выбора конкретной даты
+const chartFilter = ref('all')
+const periodFilter = ref('all')
+const selectedDate = ref('')
 
 const chartFilters = [
     { title: 'Все операции', value: 'all' },
@@ -113,26 +113,8 @@ const periodFilters = [
     { title: 'Конкретный день', value: 'custom' },
 ]
 
-// Информация о текущем фильтре
-const filterInfo = computed(() => {
-    if (periodFilter.value === 'custom' && selectedDate.value) {
-        const date = new Date(selectedDate.value)
-        return `Показаны операции за ${date.toLocaleDateString('ru-RU')}`
-    }
-    if (periodFilter.value === 'today') {
-        return 'Показаны операции за сегодня'
-    }
-    if (periodFilter.value === 'week') {
-        return 'Показаны операции за последние 7 дней'
-    }
-    if (periodFilter.value === 'month') {
-        return 'Показаны операции за текущий месяц'
-    }
-    return 'Показаны все операции'
-})
-
 // Фильтрация транзакций по периоду
-const filteredTransactions = computed(() => {
+const getFilteredTransactions = () => {
     let transactions = financeStore.transactions
 
     if (periodFilter.value === 'all') {
@@ -169,11 +151,82 @@ const filteredTransactions = computed(() => {
         const transactionDate = new Date(transaction.date)
         return transactionDate >= startDate && transactionDate < endDate
     })
+}
+
+// Подготовка данных для графика
+const getChartData = () => {
+    const filteredTransactions = getFilteredTransactions()
+    let data: { [key: string]: number } = {}
+    const colors: string[] = []
+    const labels: string[] = []
+
+    const transactionsToUse = filteredTransactions.filter((transaction) => {
+        if (chartFilter.value === 'all') return true
+        return transaction.type === chartFilter.value
+    })
+
+    if (chartFilter.value === 'all') {
+        const incomeData: { [key: string]: number } = {}
+        const expenseData: { [key: string]: number } = {}
+
+        transactionsToUse.forEach((transaction) => {
+            if (transaction.type === 'income') {
+                incomeData[transaction.category] =
+                    (incomeData[transaction.category] || 0) + transaction.amount
+            } else {
+                expenseData[transaction.category] =
+                    (expenseData[transaction.category] || 0) + transaction.amount
+            }
+        })
+
+        Object.keys(incomeData).forEach((category) => {
+            labels.push(category)
+            data[category] = incomeData[category]
+            colors.push(financeStore.getCategoryColor('income', category))
+        })
+
+        Object.keys(expenseData).forEach((category) => {
+            labels.push(category)
+            data[category] = expenseData[category]
+            colors.push(financeStore.getCategoryColor('expense', category))
+        })
+    } else {
+        transactionsToUse.forEach((transaction) => {
+            data[transaction.category] = (data[transaction.category] || 0) + transaction.amount
+        })
+
+        Object.keys(data).forEach((category) => {
+            labels.push(category)
+            colors.push(
+                financeStore.getCategoryColor(chartFilter.value as 'income' | 'expense', category)
+            )
+        })
+    }
+
+    const sortedEntries = Object.entries(data).sort(([, a], [, b]) => b - a)
+    const sortedLabels = sortedEntries.map(([label]) => label)
+    const sortedData = sortedEntries.map(([, value]) => value)
+    const sortedColors = sortedLabels.map((label) => {
+        const index = labels.indexOf(label)
+        return colors[index]
+    })
+
+    return {
+        labels: sortedLabels,
+        data: sortedData,
+        backgroundColor: sortedColors,
+    }
+}
+
+// Вычисляемые свойства (только для отображения)
+const chartData = computed(() => getChartData())
+const hasData = computed(() => {
+    return chartData.value.data.length > 0 && chartData.value.data.some((amount) => amount > 0)
 })
 
-// Сумма для центра круга
 const centerAmount = computed(() => {
-    const transactions = filteredTransactions.value.filter((transaction) => {
+    const filteredTransactions = getFilteredTransactions()
+    const transactions = filteredTransactions.filter((transaction) => {
         if (chartFilter.value === 'all') return true
         return transaction.type === chartFilter.value
     })
@@ -204,80 +257,21 @@ const centerLabel = computed(() => {
     }
 })
 
-// Подготовка данных для графика
-const chartData = computed(() => {
-    let data: { [key: string]: number } = {}
-    const colors: string[] = []
-    const labels: string[] = []
-
-    // Фильтруем по типу
-    const transactionsToUse = filteredTransactions.value.filter((transaction) => {
-        if (chartFilter.value === 'all') return true
-        return transaction.type === chartFilter.value
-    })
-
-    if (chartFilter.value === 'all') {
-        // Объединяем доходы и расходы
-        const incomeData: { [key: string]: number } = {}
-        const expenseData: { [key: string]: number } = {}
-
-        transactionsToUse.forEach((transaction) => {
-            if (transaction.type === 'income') {
-                incomeData[transaction.category] =
-                    (incomeData[transaction.category] || 0) + transaction.amount
-            } else {
-                expenseData[transaction.category] =
-                    (expenseData[transaction.category] || 0) + transaction.amount
-            }
-        })
-
-        // Добавляем доходы
-        Object.keys(incomeData).forEach((category) => {
-            const label = `${category}`
-            labels.push(label)
-            data[label] = incomeData[category]
-            colors.push(financeStore.getCategoryColor('income', category))
-        })
-
-        // Добавляем расходы
-        Object.keys(expenseData).forEach((category) => {
-            const label = `${category}`
-            labels.push(label)
-            data[label] = expenseData[category]
-            colors.push(financeStore.getCategoryColor('expense', category))
-        })
-    } else {
-        // Только доходы или только расходы
-        transactionsToUse.forEach((transaction) => {
-            data[transaction.category] = (data[transaction.category] || 0) + transaction.amount
-        })
-
-        Object.keys(data).forEach((category) => {
-            labels.push(category)
-            colors.push(
-                financeStore.getCategoryColor(chartFilter.value as 'income' | 'expense', category)
-            )
-        })
+const filterInfo = computed(() => {
+    if (periodFilter.value === 'custom' && selectedDate.value) {
+        const date = new Date(selectedDate.value)
+        return `Показаны операции за ${date.toLocaleDateString('ru-RU')}`
     }
-
-    // Сортируем по убыванию суммы
-    const sortedEntries = Object.entries(data).sort(([, a], [, b]) => b - a)
-    const sortedLabels = sortedEntries.map(([label]) => label)
-    const sortedData = sortedEntries.map(([, value]) => value)
-    const sortedColors = sortedLabels.map((label) => {
-        const index = labels.indexOf(label)
-        return colors[index]
-    })
-
-    return {
-        labels: sortedLabels,
-        data: sortedData,
-        backgroundColor: sortedColors,
+    if (periodFilter.value === 'today') {
+        return 'Показаны операции за сегодня'
     }
-})
-
-const hasData = computed(() => {
-    return chartData.value.data.length > 0 && chartData.value.data.some((amount) => amount > 0)
+    if (periodFilter.value === 'week') {
+        return 'Показаны операции за последние 7 дней'
+    }
+    if (periodFilter.value === 'month') {
+        return 'Показаны операции за текущий месяц'
+    }
+    return 'Показаны все операции'
 })
 
 const formatCurrency = (amount: number) => {
@@ -288,28 +282,20 @@ const formatCurrency = (amount: number) => {
     }).format(amount)
 }
 
-const destroyChart = () => {
-    if (chartInstance.value) {
-        chartInstance.value.destroy()
-        chartInstance.value = null
-    }
-}
+// Создание графика (вызывается только один раз)
+const createChart = async () => {
+    await nextTick()
 
-const createChart = () => {
-    if (!chartCanvas.value || !hasData.value || !isChartMounted.value) {
-        console.log('❌ Не могу создать график:', {
-            hasCanvas: !!chartCanvas.value,
-            hasData: hasData.value,
-            isMounted: isChartMounted.value,
-        })
+    if (!chartCanvas.value || !isMounted.value) {
         return
     }
 
-    // Удаляем старый график если существует
-    destroyChart()
+    // Уничтожаем старый график если существует
+    if (chartInstance.value) {
+        chartInstance.value.destroy()
+    }
 
     try {
-        console.log('📊 Создаем новый график')
         chartInstance.value = new Chart(chartCanvas.value, {
             type: 'doughnut',
             data: {
@@ -336,7 +322,7 @@ const createChart = () => {
                     },
                     tooltip: {
                         callbacks: {
-                            label: function (context) {
+                            label: (context) => {
                                 const label = context.label || ''
                                 const value = context.raw as number
                                 const total = context.dataset.data.reduce(
@@ -352,63 +338,63 @@ const createChart = () => {
                 animation: {
                     animateScale: true,
                     animateRotate: true,
+                    duration: 800,
+                    easing: 'easeOutQuart',
                 },
             },
         })
     } catch (error) {
-        console.error('❌ Ошибка создания графика:', error)
+        console.error('Ошибка создания графика:', error)
     }
 }
 
-// Создаем график при монтировании
-onMounted(() => {
-    isChartMounted.value = true
-    console.log('✅ Компонент графика смонтирован')
-
-    // Ждем следующего тика для гарантии, что DOM обновлен
-    nextTick(() => {
-        if (hasData.value) {
-            createChart()
-        }
-    })
-})
-
-// Обновляем график при изменении данных
-watch(
-    [chartData, chartFilter, periodFilter, selectedDate],
-    () => {
-        if (isChartMounted.value) {
-            console.log('🔄 Обновляем график')
-            // Используем setTimeout для гарантии, что DOM обновлен
-            setTimeout(() => {
-                if (hasData.value) {
-                    createChart()
-                } else {
-                    destroyChart()
-                }
-            }, 100)
-        }
-    },
-    { deep: true }
-)
-
-// Сбрасываем выбранную дату при смене периода
-watch(periodFilter, (newPeriod) => {
-    if (newPeriod !== 'custom') {
-        selectedDate.value = ''
+// Обновление данных графика (без пересоздания)
+const updateChartData = () => {
+    if (!chartInstance.value || !hasData.value) {
+        return
     }
+
+    try {
+        const dataset = chartInstance.value.data?.datasets?.[0]
+        if (dataset) {
+            chartInstance.value.data.labels = chartData.value.labels
+            dataset.data = chartData.value.data
+            dataset.backgroundColor = chartData.value.backgroundColor
+            chartInstance.value.update('active')
+        }
+    } catch (error) {
+        console.error('Ошибка обновления графика:', error)
+    }
+}
+
+// Обработчик изменения фильтров
+const handleFilterChange = () => {
+    if (chartInstance.value) {
+        updateChartData()
+    }
+}
+
+// Инициализация при монтировании
+onMounted(() => {
+    isMounted.value = true
+    // Ждем немного чтобы убедиться что DOM готов
+    setTimeout(() => {
+        createChart()
+    }, 100)
 })
 
-// Уничтожаем график при размонтировании
+// Уничтожение при размонтировании
 onUnmounted(() => {
-    console.log('🚪 Компонент графика размонтирован')
-    isChartMounted.value = false
-    destroyChart()
+    isMounted.value = false
+    if (chartInstance.value) {
+        chartInstance.value.destroy()
+        chartInstance.value = null
+    }
 })
 </script>
 
 <style scoped>
-.chart-container {
+.chart-wrapper {
     position: relative;
     height: 400px;
     width: 100%;
