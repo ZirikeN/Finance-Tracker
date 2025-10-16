@@ -1,34 +1,47 @@
 <template>
     <div v-if="props.loading" class="fullscreen-loader">
-        <!-- Затемнение фона -->
+        <!-- Затемнение фона с glass-morphism эффектом -->
         <div class="loader-backdrop"></div>
 
         <div class="loader-content">
+            <!-- Анимированный спиннер -->
             <div class="loader-spinner">
                 <div class="spinner-circle spinner-circle-1"></div>
                 <div class="spinner-circle spinner-circle-2"></div>
                 <div class="spinner-circle spinner-circle-3"></div>
             </div>
 
+            <!-- Текстовый контент -->
             <div class="loader-text">
                 <h3 class="loader-title">{{ props.title }}</h3>
                 <p class="loader-message">{{ props.message }}</p>
                 <p v-if="props.subMessage" class="loader-submessage">{{ props.subMessage }}</p>
             </div>
 
-            <!-- Прогресс-бар (опционально) -->
-            <v-progress-linear
-                v-if="props.showProgress"
-                color="primary"
-                indeterminate
-                height="4"
-                class="mt-4"
-            ></v-progress-linear>
+            <!-- Прогресс-бар с градиентом -->
+            <div v-if="props.showProgress" class="progress-container">
+                <v-progress-linear
+                    color="primary"
+                    indeterminate
+                    height="6"
+                    rounded
+                ></v-progress-linear>
+            </div>
+
+            <!-- Дополнительные декоративные элементы -->
+            <div class="loader-decoration">
+                <div class="decoration-dot decoration-dot-1"></div>
+                <div class="decoration-dot decoration-dot-2"></div>
+                <div class="decoration-dot decoration-dot-3"></div>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup lang="ts">
+// Импорт стилей
+import '@/assets/scss/loader.scss'
+
 interface Props {
     loading: boolean
     title?: string
@@ -46,107 +59,83 @@ const props = withDefaults(defineProps<Props>(), {
 </script>
 
 <style scoped>
-.fullscreen-loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.loader-backdrop {
+/* Дополнительные стили для декоративных элементов */
+.loader-decoration {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
+    top: -10px;
+    right: -10px;
+    bottom: -10px;
+    left: -10px;
+    pointer-events: none;
+    z-index: -1;
 }
 
-.loader-content {
-    position: relative;
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-    min-width: 280px;
-    max-width: 400px;
-}
-
-.loader-spinner {
-    position: relative;
-    width: 80px;
-    height: 80px;
-    margin: 0 auto 1.5rem;
-}
-
-.spinner-circle {
+.decoration-dot {
     position: absolute;
-    border: 3px solid transparent;
-    border-top: 3px solid #1976d2;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    background: var(--v-primary);
+    opacity: 0.6;
+    animation: float 3s ease-in-out infinite;
 }
 
-.spinner-circle-1 {
-    width: 80px;
-    height: 80px;
-    animation-duration: 1s;
+.decoration-dot-1 {
+    top: 20%;
+    left: 10%;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    animation-delay: 0s;
 }
 
-.spinner-circle-2 {
-    top: 10px;
-    left: 10px;
-    width: 60px;
-    height: 60px;
-    border-top-color: #42a5f5;
-    animation-duration: 1.2s;
-    animation-direction: reverse;
+.decoration-dot-2 {
+    top: 60%;
+    right: 15%;
+    background: linear-gradient(135deg, #4facfe, #00f2fe);
+    animation-delay: 1s;
 }
 
-.spinner-circle-3 {
-    top: 20px;
-    left: 20px;
-    width: 40px;
-    height: 40px;
-    border-top-color: #90caf9;
-    animation-duration: 0.8s;
+.decoration-dot-3 {
+    bottom: 30%;
+    left: 20%;
+    background: linear-gradient(135deg, #fa709a, #fee140);
+    animation-delay: 2s;
 }
 
-.loader-text {
-    margin-bottom: 1rem;
+@keyframes float {
+    0%,
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translateY(-20px) scale(1.1);
+        opacity: 0.8;
+    }
 }
 
-.loader-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: #1976d2;
+/* Плавное появление и исчезновение */
+.fullscreen-loader {
+    transition: opacity 0.3s ease-out;
 }
 
-.loader-message {
-    font-size: 0.875rem;
-    color: #666;
-    margin-bottom: 0.25rem;
-}
-
-.loader-submessage {
-    font-size: 0.75rem;
-    color: #999;
-}
-
+/* Улучшенная анимация спиннера */
 @keyframes spin {
     0% {
         transform: rotate(0deg);
+        border-top-color: #667eea;
+    }
+    25% {
+        border-top-color: #764ba2;
+    }
+    50% {
+        border-top-color: #4facfe;
+    }
+    75% {
+        border-top-color: #00f2fe;
     }
     100% {
         transform: rotate(360deg);
+        border-top-color: #667eea;
     }
 }
 </style>

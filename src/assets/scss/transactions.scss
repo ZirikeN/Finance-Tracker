@@ -1,0 +1,85 @@
+@import '../main.scss';
+
+.transactions-container {
+    min-height: 100vh;
+}
+
+.transaction-filters {
+    background: white;
+    border-radius: 20px;
+    box-shadow: $card-shadow;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+.transaction-item-detailed {
+    border-radius: 16px;
+    margin: 8px 0;
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+
+    &:hover {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        transform: translateX(8px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.transaction-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+}
+
+.stats-grid {
+    .stat-card-mini {
+        background: white;
+        border-radius: 16px;
+        padding: 20px;
+        box-shadow: $card-shadow;
+        transition: all 0.3s ease;
+        text-align: center;
+
+        &:hover {
+            transform: translateY(-5px);
+            box-shadow: $card-hover-shadow;
+        }
+
+        &.income-stat {
+            border-left: 4px solid #4caf50;
+        }
+
+        &.expense-stat {
+            border-left: 4px solid #f44336;
+        }
+
+        &.balance-stat {
+            border-left: 4px solid #2196f3;
+        }
+
+        &.count-stat {
+            border-left: 4px solid #9c27b0;
+        }
+    }
+}
+
+// Темная тема
+.v-theme--dark {
+    .transactions-container {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    }
+
+    .transaction-filters,
+    .stats-grid .stat-card-mini {
+        background: rgba(30, 30, 30, 0.9);
+        color: white;
+    }
+
+    .transaction-item-detailed:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+}

@@ -1,5 +1,5 @@
 <template>
-    <v-app id="inspire">
+    <v-app id="inspire" class="transactions-container">
         <FullScreenLoader
             :loading="financeStore.loading"
             title="Загрузка операций"
@@ -7,235 +7,328 @@
             :show-progress="true"
         />
 
-        <v-navigation-drawer v-model="drawer" class="custom-drawer">
+        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card">
             <NavMenu></NavMenu>
         </v-navigation-drawer>
 
-        <v-app-bar>
-            <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-            <v-app-bar-title>Все операции</v-app-bar-title>
+        <v-app-bar class="glass-card" elevation="0">
+            <v-app-bar-nav-icon
+                @click="drawer = !drawer"
+                class="gradient-icon"
+                size="large"
+            ></v-app-bar-nav-icon>
+            <v-app-bar-title class="font-bold gradient-text"> 📋 Все операции </v-app-bar-title>
             <v-spacer></v-spacer>
 
-            <!-- Фильтры -->
-            <div class="d-flex align-center" style="gap: 12px">
-                <v-select
-                    v-model="typeFilter"
-                    :items="typeFilters"
-                    density="compact"
-                    variant="outlined"
-                    style="min-width: 140px"
-                    hide-details
-                    placeholder="Все типы"
-                    clearable
-                />
-                <v-text-field
-                    v-model="searchQuery"
-                    density="compact"
-                    variant="outlined"
-                    placeholder="Поиск..."
-                    prepend-inner-icon="mdi-magnify"
-                    style="min-width: 200px"
-                    hide-details
-                />
-                <v-btn
-                    @click="refreshTransactions"
-                    variant="outlined"
-                    :loading="financeStore.loading"
-                >
-                    <v-icon class="mr-2">mdi-refresh</v-icon>
-                    Обновить
-                </v-btn>
-            </div>
-
             <div class="user-info ml-4">
-                <v-icon icon="mdi-account-circle" class="mr-2" />
-                <span>{{ authStore.user?.email }}</span>
+                <v-avatar size="32" color="primary" class="mr-2">
+                    <v-icon icon="mdi-account" color="white"></v-icon>
+                </v-avatar>
+                <span class="font-medium">{{ authStore.user?.email }}</span>
             </div>
         </v-app-bar>
 
         <v-main>
-            <v-container fluid>
+            <v-container fluid class="pa-4">
+                <!-- Фильтры -->
+                <div class="transaction-filters fade-in-up">
+                    <v-row class="align-center">
+                        <v-col cols="12" md="8">
+                            <div class="d-flex align-center" style="gap: 16px">
+                                <v-select
+                                    v-model="typeFilter"
+                                    :items="typeFilters"
+                                    density="comfortable"
+                                    variant="outlined"
+                                    style="min-width: 160px"
+                                    hide-details
+                                    placeholder="Все типы"
+                                    clearable
+                                    class="filter-select"
+                                />
+                                <v-text-field
+                                    v-model="searchQuery"
+                                    density="comfortable"
+                                    variant="outlined"
+                                    placeholder="Поиск по категории или описанию..."
+                                    prepend-inner-icon="mdi-magnify"
+                                    style="min-width: 300px"
+                                    hide-details
+                                    class="search-field"
+                                />
+                            </div>
+                        </v-col>
+                        <v-col cols="12" md="4" class="text-right">
+                            <v-btn
+                                @click="refreshTransactions"
+                                variant="flat"
+                                :loading="financeStore.loading"
+                                class="gradient-btn"
+                            >
+                                <v-icon class="mr-2">mdi-refresh</v-icon>
+                                Обновить данные
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </div>
+
+                <!-- Статистика -->
+                <v-row class="mb-8">
+                    <v-col cols="12" md="3" class="fade-in-up">
+                        <div class="stats-grid">
+                            <v-card class="stat-card-mini count-stat pa-4">
+                                <v-card-text class="text-center">
+                                    <v-icon size="40" color="purple" class="mb-2"
+                                        >mdi-receipt</v-icon
+                                    >
+                                    <div class="text-h4 font-bold text-purple">
+                                        {{ filteredTransactions.length }}
+                                    </div>
+                                    <div class="text-caption font-medium text-medium-emphasis">
+                                        ВСЕГО ОПЕРАЦИЙ
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </div>
+                    </v-col>
+
+                    <v-col cols="12" md="3" class="fade-in-up delay-1">
+                        <div class="stats-grid">
+                            <v-card class="stat-card-mini income-stat pa-4">
+                                <v-card-text class="text-center">
+                                    <v-icon size="40" color="success" class="mb-2"
+                                        >mdi-trending-up</v-icon
+                                    >
+                                    <div class="text-h4 font-bold text-success">
+                                        {{ formatCurrency(totalIncomeFiltered) }}
+                                    </div>
+                                    <div class="text-caption font-medium text-medium-emphasis">
+                                        ДОХОДЫ
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </div>
+                    </v-col>
+
+                    <v-col cols="12" md="3" class="fade-in-up delay-2">
+                        <div class="stats-grid">
+                            <v-card class="stat-card-mini expense-stat pa-4">
+                                <v-card-text class="text-center">
+                                    <v-icon size="40" color="error" class="mb-2"
+                                        >mdi-trending-down</v-icon
+                                    >
+                                    <div class="text-h4 font-bold text-error">
+                                        {{ formatCurrency(totalExpensesFiltered) }}
+                                    </div>
+                                    <div class="text-caption font-medium text-medium-emphasis">
+                                        РАСХОДЫ
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </div>
+                    </v-col>
+
+                    <v-col cols="12" md="3" class="fade-in-up delay-3">
+                        <div class="stats-grid">
+                            <v-card class="stat-card-mini balance-stat pa-4">
+                                <v-card-text class="text-center">
+                                    <v-icon
+                                        size="40"
+                                        :color="balanceFiltered >= 0 ? 'success' : 'error'"
+                                        class="mb-2"
+                                    >
+                                        mdi-account-balance-wallet
+                                    </v-icon>
+                                    <div
+                                        class="text-h4 font-bold"
+                                        :class="{
+                                            'text-success': balanceFiltered > 0,
+                                            'text-error': balanceFiltered < 0,
+                                            'text-blue': balanceFiltered === 0,
+                                        }"
+                                    >
+                                        {{ formatCurrency(balanceFiltered) }}
+                                    </div>
+                                    <div class="text-caption font-medium text-medium-emphasis">
+                                        БАЛАНС
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </div>
+                    </v-col>
+                </v-row>
+
+                <!-- Список операций -->
                 <v-row>
-                    <v-col cols="12">
-                        <v-card>
-                            <v-card-text>
-                                <!-- Статистика -->
-                                <v-row class="mb-6">
-                                    <v-col cols="12" md="3">
-                                        <v-card color="blue-lighten-5" variant="outlined">
-                                            <v-card-text class="text-center">
-                                                <div class="text-h5">
-                                                    {{ filteredTransactions.length }}
-                                                </div>
-                                                <div class="text-caption">ВСЕГО ОПЕРАЦИЙ</div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" md="3">
-                                        <v-card color="green-lighten-5" variant="outlined">
-                                            <v-card-text class="text-center text-green">
-                                                <div class="text-h5">
-                                                    {{ formatCurrency(totalIncomeFiltered) }}
-                                                </div>
-                                                <div class="text-caption">ДОХОДЫ</div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" md="3">
-                                        <v-card color="red-lighten-5" variant="outlined">
-                                            <v-card-text class="text-center text-red">
-                                                <div class="text-h5">
-                                                    {{ formatCurrency(totalExpensesFiltered) }}
-                                                </div>
-                                                <div class="text-caption">РАСХОДЫ</div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" md="3">
-                                        <v-card color="orange-lighten-5" variant="outlined">
-                                            <v-card-text class="text-center text-orange">
-                                                <div class="text-h5">
-                                                    {{ formatCurrency(balanceFiltered) }}
-                                                </div>
-                                                <div class="text-caption">БАЛАНС</div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
-
-                                <!-- Список операций -->
-                                <v-card variant="outlined">
-                                    <v-card-title class="d-flex justify-space-between align-center">
-                                        <div>
-                                            <v-icon class="mr-2">mdi-format-list-bulleted</v-icon>
-                                            Список операций
+                    <v-col cols="12" class="fade-in-up">
+                        <div class="transaction-list">
+                            <v-card-title class="d-flex justify-space-between align-center pa-6">
+                                <div class="d-flex align-center">
+                                    <v-icon class="mr-3 text-primary" size="32"
+                                        >mdi-format-list-bulleted</v-icon
+                                    >
+                                    <div>
+                                        <div class="text-h5 font-bold">Список операций</div>
+                                        <div class="text-caption text-medium-emphasis">
+                                            Все финансовые операции
                                         </div>
-                                        <v-chip variant="outlined" color="primary">
-                                            Показано: {{ filteredTransactions.length }} из
-                                            {{ financeStore.transactions.length }}
-                                        </v-chip>
-                                    </v-card-title>
+                                    </div>
+                                </div>
+                                <v-chip class="status-chip" color="primary" variant="flat">
+                                    Показано: {{ filteredTransactions.length }} из
+                                    {{ financeStore.transactions.length }}
+                                </v-chip>
+                            </v-card-title>
 
-                                    <v-card-text>
-                                        <v-list v-if="filteredTransactions.length > 0">
-                                            <v-list-item
-                                                v-for="transaction in filteredTransactions"
-                                                :key="transaction.id"
-                                                class="mb-2 transaction-item"
+                            <v-card-text class="pa-0">
+                                <v-list class="pa-4">
+                                    <v-list-item
+                                        v-for="transaction in filteredTransactions"
+                                        :key="transaction.id"
+                                        class="transaction-item-detailed pa-4"
+                                    >
+                                        <template v-slot:prepend>
+                                            <div
+                                                class="transaction-avatar"
+                                                :style="{
+                                                    backgroundColor:
+                                                        transaction.type === 'income'
+                                                            ? '#E8F5E8'
+                                                            : '#FFEBEE',
+                                                }"
                                             >
-                                                <template v-slot:prepend>
-                                                    <v-icon
-                                                        :color="
-                                                            transaction.type === 'income'
-                                                                ? 'success'
-                                                                : 'error'
-                                                        "
-                                                        size="small"
-                                                    >
-                                                        {{
-                                                            transaction.type === 'income'
-                                                                ? 'mdi-arrow-up'
-                                                                : 'mdi-arrow-down'
-                                                        }}
-                                                    </v-icon>
-                                                </template>
+                                                <v-icon
+                                                    :color="
+                                                        transaction.type === 'income'
+                                                            ? 'success'
+                                                            : 'error'
+                                                    "
+                                                    size="28"
+                                                >
+                                                    {{
+                                                        transaction.type === 'income'
+                                                            ? 'mdi-arrow-up'
+                                                            : 'mdi-arrow-down'
+                                                    }}
+                                                </v-icon>
+                                            </div>
+                                        </template>
 
-                                                <v-list-item-title class="d-flex align-center">
-                                                    <v-icon
-                                                        :color="transaction.color"
-                                                        size="small"
-                                                        class="mr-3"
-                                                    >
-                                                        {{
-                                                            financeStore.getCategoryIcon(
-                                                                transaction.type,
-                                                                transaction.category
-                                                            )
-                                                        }}
-                                                    </v-icon>
-                                                    <div>
-                                                        <div class="font-weight-medium">
-                                                            {{ transaction.category }}
-                                                        </div>
-                                                        <div
-                                                            class="text-caption text-grey"
-                                                            v-if="transaction.description"
-                                                        >
-                                                            {{ transaction.description }}
-                                                        </div>
-                                                    </div>
-                                                </v-list-item-title>
+                                        <v-list-item-title class="font-bold mb-1">
+                                            <div class="d-flex align-center">
+                                                <v-icon
+                                                    :color="transaction.color"
+                                                    size="small"
+                                                    class="mr-2"
+                                                >
+                                                    mdi-circle
+                                                </v-icon>
+                                                {{ transaction.category }}
+                                            </div>
+                                        </v-list-item-title>
 
-                                                <v-list-item-subtitle>
-                                                    <div>{{ formatDate(transaction.date) }}</div>
-                                                </v-list-item-subtitle>
-
-                                                <template v-slot:append>
-                                                    <div class="text-right">
-                                                        <div
-                                                            :class="{
-                                                                'text-success':
-                                                                    transaction.type === 'income',
-                                                                'text-error':
-                                                                    transaction.type === 'expense',
-                                                            }"
-                                                            class="text-h6 font-weight-bold"
-                                                        >
-                                                            {{
-                                                                transaction.type === 'income'
-                                                                    ? '+'
-                                                                    : '-'
-                                                            }}
-                                                            {{ formatCurrency(transaction.amount) }}
-                                                        </div>
-                                                        <div
-                                                            class="d-flex justify-end mt-2"
-                                                            style="gap: 8px"
-                                                        >
-                                                            <v-btn
-                                                                icon
-                                                                size="small"
-                                                                color="primary"
-                                                                @click="
-                                                                    editTransaction(transaction)
-                                                                "
-                                                                variant="text"
-                                                            >
-                                                                <v-icon>mdi-pencil</v-icon>
-                                                            </v-btn>
-                                                            <v-btn
-                                                                icon
-                                                                size="small"
-                                                                color="error"
-                                                                @click="
-                                                                    deleteTransaction(
-                                                                        transaction.id
-                                                                    )
-                                                                "
-                                                                variant="text"
-                                                            >
-                                                                <v-icon>mdi-delete</v-icon>
-                                                            </v-btn>
-                                                        </div>
-                                                    </div>
-                                                </template>
-                                            </v-list-item>
-                                        </v-list>
-
-                                        <!-- Сообщение когда нет операций -->
-                                        <div v-else class="text-center py-8">
-                                            <v-icon size="64" color="grey-lighten-2" class="mb-4"
-                                                >mdi-cash-remove</v-icon
+                                        <v-list-item-subtitle class="text-caption">
+                                            <div class="d-flex align-center">
+                                                <v-icon size="small" color="grey" class="mr-1"
+                                                    >mdi-calendar</v-icon
+                                                >
+                                                {{ formatDate(transaction.date) }}
+                                            </div>
+                                            <div
+                                                v-if="transaction.description"
+                                                class="text-medium-emphasis mt-1"
                                             >
-                                            <p class="text-h6 text-grey">Операции не найдены</p>
-                                            <p class="text-grey">
-                                                Попробуйте изменить параметры фильтрации
-                                            </p>
-                                        </div>
-                                    </v-card-text>
-                                </v-card>
+                                                {{ transaction.description }}
+                                            </div>
+                                        </v-list-item-subtitle>
+
+                                        <template v-slot:append>
+                                            <div class="text-right">
+                                                <div
+                                                    :class="{
+                                                        'text-success':
+                                                            transaction.type === 'income',
+                                                        'text-error':
+                                                            transaction.type === 'expense',
+                                                    }"
+                                                    class="text-h5 font-bold"
+                                                >
+                                                    {{ transaction.type === 'income' ? '+' : '-' }}
+                                                    {{ formatCurrency(transaction.amount) }}
+                                                </div>
+                                                <v-chip
+                                                    size="small"
+                                                    :color="
+                                                        transaction.type === 'income'
+                                                            ? 'green-lighten-4'
+                                                            : 'red-lighten-4'
+                                                    "
+                                                    :text-color="
+                                                        transaction.type === 'income'
+                                                            ? 'green-darken-2'
+                                                            : 'red-darken-2'
+                                                    "
+                                                    class="mt-2"
+                                                >
+                                                    {{
+                                                        transaction.type === 'income'
+                                                            ? 'Доход'
+                                                            : 'Расход'
+                                                    }}
+                                                </v-chip>
+                                                <div
+                                                    class="d-flex justify-end mt-2"
+                                                    style="gap: 8px"
+                                                >
+                                                    <v-btn
+                                                        icon
+                                                        size="small"
+                                                        color="primary"
+                                                        @click="editTransaction(transaction)"
+                                                        variant="text"
+                                                        class="action-btn"
+                                                    >
+                                                        <v-icon>mdi-pencil</v-icon>
+                                                    </v-btn>
+                                                    <v-btn
+                                                        icon
+                                                        size="small"
+                                                        color="error"
+                                                        @click="deleteTransaction(transaction.id)"
+                                                        variant="text"
+                                                        class="action-btn"
+                                                    >
+                                                        <v-icon>mdi-delete</v-icon>
+                                                    </v-btn>
+                                                </div>
+                                            </div>
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
+
+                                <!-- Сообщение когда нет операций -->
+                                <div
+                                    v-if="filteredTransactions.length === 0"
+                                    class="text-center py-8"
+                                >
+                                    <v-icon size="80" color="grey-lighten-2" class="mb-4"
+                                        >mdi-cash-remove</v-icon
+                                    >
+                                    <p class="text-h6 text-grey">Операции не найдены</p>
+                                    <p class="text-grey mb-4">
+                                        Попробуйте изменить параметры фильтрации
+                                    </p>
+                                    <v-btn
+                                        @click="refreshTransactions"
+                                        color="primary"
+                                        variant="outlined"
+                                    >
+                                        <v-icon class="mr-2">mdi-refresh</v-icon>
+                                        Обновить
+                                    </v-btn>
+                                </div>
                             </v-card-text>
-                        </v-card>
+                        </div>
                     </v-col>
                 </v-row>
             </v-container>
@@ -243,10 +336,10 @@
 
         <!-- Диалог редактирования операции -->
         <v-dialog v-model="editDialog" max-width="600px" persistent>
-            <v-card>
-                <v-card-title class="headline"> Редактировать операцию </v-card-title>
+            <v-card class="glass-card">
+                <v-card-title class="headline font-bold"> ✏️ Редактировать операцию </v-card-title>
 
-                <v-card-text>
+                <v-card-text class="pt-4">
                     <v-form @submit.prevent="saveTransaction">
                         <v-container>
                             <!-- Тип операции -->
@@ -256,8 +349,8 @@
                                 class="mb-4"
                                 label="Тип операции"
                             >
-                                <v-radio label="Доход" value="income" color="success" />
-                                <v-radio label="Расход" value="expense" color="error" />
+                                <v-radio label="📈 Доход" value="income" color="success" />
+                                <v-radio label="📉 Расход" value="expense" color="error" />
                             </v-radio-group>
 
                             <!-- Категория -->
@@ -268,6 +361,7 @@
                                 :rules="[(v) => !!v || 'Выберите категорию']"
                                 required
                                 class="mb-4"
+                                variant="outlined"
                             >
                                 <template v-slot:item="{ item, props }">
                                     <v-list-item v-bind="props">
@@ -298,6 +392,7 @@
                                 ]"
                                 required
                                 class="mb-4"
+                                variant="outlined"
                             />
 
                             <!-- Дата -->
@@ -308,6 +403,7 @@
                                 :rules="[(v) => !!v || 'Выберите дату']"
                                 required
                                 class="mb-4"
+                                variant="outlined"
                             />
 
                             <!-- Описание -->
@@ -317,6 +413,7 @@
                                 rows="2"
                                 class="mb-4"
                                 placeholder="Необязательное описание операции"
+                                variant="outlined"
                             />
                         </v-container>
                     </v-form>
@@ -324,12 +421,13 @@
 
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn @click="closeEditDialog" color="grey">Отмена</v-btn>
+                    <v-btn @click="closeEditDialog" color="grey" variant="text">Отмена</v-btn>
                     <v-btn
                         @click="saveTransaction"
                         color="primary"
                         :loading="editLoading"
                         :disabled="!editFormValid"
+                        class="gradient-btn"
                     >
                         Сохранить
                     </v-btn>
@@ -347,6 +445,9 @@ import { useCategoriesStore } from '../stores/category'
 import NavMenu from '../components/NavMenu.vue'
 import FullScreenLoader from '../components/FullScreenLoader.vue'
 import type { Transaction, TransactionForm } from '@/types/transaction'
+
+// Импорт стилей
+import '@/assets/scss/transactions.scss'
 
 const drawer = ref<boolean | null>(false)
 const authStore = useAuthStore()
@@ -371,8 +472,8 @@ const editForm = reactive<TransactionForm>({
 })
 
 const typeFilters = [
-    { title: 'Все доходы', value: 'income' },
-    { title: 'Все расходы', value: 'expense' },
+    { title: '📈 Все доходы', value: 'income' },
+    { title: '📉 Все расходы', value: 'expense' },
 ]
 
 // Доступные категории для редактирования
@@ -463,7 +564,6 @@ const editTransaction = (transaction: Transaction) => {
     editDialog.value = true
 }
 
-
 const saveTransaction = async () => {
     if (!editingTransaction.value || !editFormValid.value) return
 
@@ -529,7 +629,7 @@ onMounted(() => {
 
 <style scoped>
 .custom-drawer {
-    border-right: 1px solid #e0e0e0;
+    border-right: none;
 }
 
 .user-info {
@@ -537,13 +637,16 @@ onMounted(() => {
     align-items: center;
 }
 
-.transaction-item {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    transition: box-shadow 0.2s;
+.filter-select,
+.search-field {
+    border-radius: 12px;
 }
 
-.transaction-item:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.action-btn {
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    transform: scale(1.1);
 }
 </style>
