@@ -1,0 +1,108 @@
+@import '../main.scss';
+
+.categories-container {
+    min-height: 100vh;
+}
+
+.category-card {
+    background: white;
+    border: none;
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    &:hover {
+        transform: translateY(-8px);
+        box-shadow: $card-hover-shadow;
+
+        &::before {
+            transform: scaleX(1);
+        }
+    }
+}
+
+.category-type-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: $card-shadow;
+    transition: all 0.3s ease;
+    overflow: hidden;
+
+    &:hover {
+        box-shadow: $card-hover-shadow;
+        transform: translateY(-5px);
+    }
+
+    &.income-card {
+        border-top: 4px solid #4caf50;
+    }
+
+    &.expense-card {
+        border-top: 4px solid #f44336;
+    }
+}
+
+.category-item {
+    border-radius: 12px;
+    margin: 8px 0;
+    transition: all 0.3s ease;
+    border: 1px solid #f0f0f0;
+
+    &:hover {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        transform: translateY(3px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    }
+}
+
+.category-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+}
+
+.color-picker-container {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: $card-shadow;
+}
+
+.empty-state {
+    background: white;
+    border-radius: 20px;
+    box-shadow: $card-shadow;
+}
+
+// Темная тема
+.v-theme--dark {
+    .categories-container {
+        background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+    }
+
+    .category-card,
+    .category-type-card,
+    .empty-state {
+        background: rgba(30, 30, 30, 0.9);
+        color: white;
+    }
+
+    .category-item:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
+}

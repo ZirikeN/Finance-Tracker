@@ -1,0 +1,262 @@
+@import '../main.scss';
+
+.fullscreen-loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+
+    .loader-backdrop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.6) 0%, rgba(0, 0, 0, 0.4) 100%);
+        backdrop-filter: blur(10px);
+    }
+
+    .loader-content {
+        position: relative;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 24px;
+        padding: 3rem 2rem;
+        text-align: center;
+        box-shadow:
+            0 20px 60px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
+        min-width: 320px;
+        max-width: 450px;
+        animation: slideUp 0.5s ease-out;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: $primary-gradient;
+            border-radius: 24px 24px 0 0;
+        }
+    }
+
+    .loader-spinner {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 2rem;
+    }
+
+    .spinner-circle {
+        position: absolute;
+        border: 3px solid transparent;
+        border-radius: 50%;
+        animation: spin 1.5s linear infinite;
+    }
+
+    .spinner-circle-1 {
+        width: 100px;
+        height: 100px;
+        border-top: 3px solid;
+        border-image: $primary-gradient;
+        border-image-slice: 1;
+        animation-duration: 2s;
+    }
+
+    .spinner-circle-2 {
+        top: 15px;
+        left: 15px;
+        width: 70px;
+        height: 70px;
+        border-top: 3px solid;
+        border-image: $success-gradient;
+        border-image-slice: 1;
+        animation-duration: 1.5s;
+        animation-direction: reverse;
+    }
+
+    .spinner-circle-3 {
+        top: 30px;
+        left: 30px;
+        width: 40px;
+        height: 40px;
+        border-top: 3px solid;
+        border-image: $warning-gradient;
+        border-image-slice: 1;
+        animation-duration: 1s;
+    }
+
+    .loader-text {
+        margin-bottom: 1.5rem;
+    }
+
+    .loader-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        background: $primary-gradient;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .loader-message {
+        font-size: 1rem;
+        color: #666;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+
+    .loader-submessage {
+        font-size: 0.875rem;
+        color: #999;
+        font-weight: 400;
+    }
+
+    .progress-container {
+        margin-top: 1.5rem;
+
+        .v-progress-linear {
+            border-radius: 10px;
+            overflow: hidden;
+
+            ::v-deep(.v-progress-linear__background) {
+                background: rgba(0, 0, 0, 0.1);
+            }
+
+            ::v-deep(.v-progress-linear__indeterminate) {
+                &.primary {
+                    background: $primary-gradient;
+                }
+
+                &.long,
+                &.short {
+                    background: $primary-gradient;
+                }
+            }
+        }
+    }
+}
+
+// Анимации
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+@keyframes pulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+}
+
+// Дополнительные эффекты
+.loader-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+// Темная тема
+.v-theme--dark {
+    .fullscreen-loader {
+        .loader-backdrop {
+            background: linear-gradient(135deg, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.6) 100%);
+        }
+
+        .loader-content {
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow:
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+        }
+
+        .loader-message {
+            color: #ccc;
+        }
+
+        .loader-submessage {
+            color: #999;
+        }
+    }
+}
+
+// Адаптивность
+@media (max-width: 600px) {
+    .fullscreen-loader {
+        .loader-content {
+            margin: 1rem;
+            padding: 2rem 1.5rem;
+            min-width: auto;
+        }
+
+        .loader-spinner {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 1.5rem;
+        }
+
+        .spinner-circle-1 {
+            width: 80px;
+            height: 80px;
+        }
+
+        .spinner-circle-2 {
+            top: 12px;
+            left: 12px;
+            width: 56px;
+            height: 56px;
+        }
+
+        .spinner-circle-3 {
+            top: 24px;
+            left: 24px;
+            width: 32px;
+            height: 32px;
+        }
+
+        .loader-title {
+            font-size: 1.25rem;
+        }
+
+        .loader-message {
+            font-size: 0.9rem;
+        }
+    }
+}

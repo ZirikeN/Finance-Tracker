@@ -27,9 +27,6 @@
             value="transactions"
             @click="router.push('/transactions')"
         ></v-list-item>
-        <v-list-item prepend-icon="mdi-finance" title="Финансы" value="finance" class="nav-item" />
-        <v-list-item prepend-icon="mdi-chart-bar" title="Отчеты" value="reports" class="nav-item" />
-        <v-list-item prepend-icon="mdi-cog" title="Настройки" value="settings" class="nav-item" />
 
         <v-list-item class="theme-toggle-item">
             <template v-slot:prepend>

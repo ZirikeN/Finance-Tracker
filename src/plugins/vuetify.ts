@@ -13,4 +13,9 @@ export default createVuetify({
     icons: {
         defaultSet: 'mdi',
     },
+    defaults: {
+        global: {
+            fontFamily: 'Montserrat',
+        }
+    }
 })
