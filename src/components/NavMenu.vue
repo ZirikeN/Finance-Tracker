@@ -1,5 +1,6 @@
 <template>
     <v-list v-if="authStore.user">
+        <!-- Добавьте @click для каждого пункта меню -->
         <v-list-item prepend-icon="mdi-wallet">{{
             formatCurrency(financeStore.balance)
         }}</v-list-item>
@@ -7,25 +8,25 @@
         <!-- Профиль пользователя -->
         <v-list-item prepend-icon="mdi-account" :title="authStore.user?.email || 'Пользователь'" />
 
-        <!-- Навигационные пункты -->
+        <!-- Навигационные пункты с закрытием меню -->
         <v-list-item
             prepend-icon="mdi-home"
             title="Главная"
             value="home"
-            @click="$router.push('/home')"
+            @click="navigateAndClose('/home')"
             class="nav-item"
         />
         <v-list-item
             prepend-icon="mdi-tag-multiple"
             title="Категории"
             value="categories"
-            @click="router.push('/categories')"
+            @click="navigateAndClose('/categories')"
         ></v-list-item>
         <v-list-item
             prepend-icon="mdi-format-list-bulleted"
             title="Все операции"
             value="transactions"
-            @click="router.push('/transactions')"
+            @click="navigateAndClose('/transactions')"
         ></v-list-item>
 
         <v-list-item class="theme-toggle-item">
@@ -99,9 +100,17 @@ const authStore = useAuthStore()
 const financeStore = useFinanceStore()
 const theme = useTheme()
 
+// Определите emit
+const emit = defineEmits(['close'])
+
 const toggleTheme = () => {
     theme.global.name.value = theme.global.name.value === 'light' ? 'dark' : 'light'
     localStorage.setItem('app-theme', theme.global.name.value)
+}
+
+const navigateAndClose = (route: string) => {
+    router.push(route)
+    emit('close') // Закрываем меню после навигации
 }
 
 const handleLogout = async (): Promise<void> => {
@@ -109,6 +118,7 @@ const handleLogout = async (): Promise<void> => {
         await authStore.logout()
         financeStore.transactions = []
         router.push('/')
+        emit('close') // Закрываем меню после выхода
     } catch (error) {
         console.error('Logout error:', error)
     }
