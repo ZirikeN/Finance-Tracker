@@ -8,7 +8,7 @@
             <div class="bg-shape shape-4"></div>
         </div>
 
-        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card">
+        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card" floating overlay temporary persistent>
             <nav-menu></nav-menu>
         </v-navigation-drawer>
 

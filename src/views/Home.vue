@@ -8,8 +8,8 @@
             :show-progress="true"
         />
 
-        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card">
-            <NavMenu></NavMenu>
+        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card" floating overlay temporary persistent>
+            <NavMenu @close="drawer = false"></NavMenu>
         </v-navigation-drawer>
 
         <v-app-bar class="glass-card" elevation="0">

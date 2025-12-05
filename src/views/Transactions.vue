@@ -7,7 +7,7 @@
             :show-progress="true"
         />
 
-        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card">
+        <v-navigation-drawer v-model="drawer" class="custom-drawer glass-card" floating overlay temporary persistent>
             <NavMenu></NavMenu>
         </v-navigation-drawer>
 
@@ -137,7 +137,7 @@
                                         :color="balanceFiltered >= 0 ? 'success' : 'error'"
                                         class="mb-2"
                                     >
-                                        mdi-account-balance-wallet
+                                        mdi-wallet
                                     </v-icon>
                                     <div
                                         class="text-h4 font-bold"
